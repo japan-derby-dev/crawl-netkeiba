@@ -2,8 +2,9 @@
 * Windows 10 1803
 * Python 3.7.2
 * pip 19.0.3
-* requests
-* BeautifulSoup
+* import ライブラリ
+  * requests
+  * BeautifulSoup
 
 # アクションプラン
 * [x]  単一の競走馬ページにアクセスして、html情報を取得
