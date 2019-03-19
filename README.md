@@ -5,6 +5,7 @@
 * import ライブラリ
   * requests
   * BeautifulSoup
+  * lxml
 
 # アクションプラン
 * [x]  単一の競走馬ページにアクセスして、html情報を取得
