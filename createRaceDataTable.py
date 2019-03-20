@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[179]:
+
+
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import csv
+from urllib.parse import urljoin
+import os.path, time, re
 
 #テーブル情報からDataFrame生成する関数
 def getRaceResult(URL):
@@ -118,20 +123,55 @@ def getRaceHeader(URL):
     return df
 
 #ヘッダーDataFrameとレース結果DataFrameを横結合
-def conbinDataFrame(r_df, h_df):
+def combineDataFrame(r_df, h_df, fid=1):
     for idx in range((len(r_df))):
         h_df.loc[idx] = h_df.iloc[0]
     df = pd.concat([r_df, h_df], axis=1)
     
     #csv出力
-    df.to_csv("merge_raceTable.csv")
+    file_name = "raceTable_" + str(fid) + ".csv"
+    #df.to_csv(file_name)
     
     return df
 
 #確認用
-url = 'https://race.netkeiba.com/?pid=race&id=c201906020802&mode=result'
-r_df = getRaceResult(url)
-h_df = getRaceHeader(url)
-df = conbinDataFrame(r_df, h_df)
-df
+#url = "https://race.netkeiba.com/?pid=race&id=p201906020701&mode=top"
+#r_df = getRaceResult(url)
+#h_df = getRaceHeader(url)
+#df = combineDataFrame(r_df, h_df, 2)
+
+#開催レース一覧ページ（日別）からレースページのリンク配列を生成
+def getLinks(URL):
+    #定数定義
+    CLS_NAME = "racename"
+    
+    html = requests.get(URL)
+    soup = BeautifulSoup(html.content, 'html.parser')
+
+    links = []
+    #テーブルを指定->レコード取得
+    races = soup.find_all("div",{"class":CLS_NAME})
+   
+    for race in races:
+        race_link = race.find('a').get('href')
+        links.append(urljoin(URL, race_link))
+        
+    return links
+
+#確認用----------------------------------------------------------
+url = 'https://race.netkeiba.com/?pid=race_list&id=p0316'
+links = getLinks(url)
+org_df = pd.DataFrame()
+
+#取得したリンク配列を使ってcsvを連続生成
+for idx, url in enumerate(links):
+    r_df = getRaceResult(url)
+    h_df = getRaceHeader(url)
+    df = combineDataFrame(r_df, h_df, idx)
+    org_df = pd.concat([org_df,df])
+    time.sleep(1)
+    
+org_df.reset_index()
+org_df.to_csv("race_merge.csv")
+#----------------------------------------------------------------
 
