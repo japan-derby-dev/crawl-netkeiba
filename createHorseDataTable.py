@@ -114,6 +114,25 @@ horseinfo_df = pd.DataFrame([horseinfo_data], columns=horseinfo_header)
 horseraceresult_df = pd.DataFrame(
     horseraceresult_data, columns=horseraceresult_header)
 
+# データフレーム加工
+# 基本情報
+horseinfo_df["horse_name"] = horseinfo_df["horse_name"].str.strip()
+horseinfo_df["horse_age"] = horseinfo_df["horse_age"].str.strip()
+horseinfo_df["horse_father"] = horseinfo_df["horse_father"].str.strip()
+horseinfo_df["horse_paternalgrandfather"] = horseinfo_df["horse_paternalgrandfather"].str.strip()
+horseinfo_df["horse_paternalgrandmother"] = horseinfo_df["horse_paternalgrandmother"].str.strip()
+horseinfo_df["horse_mother"] = horseinfo_df["horse_mother"].str.strip()
+horseinfo_df["horse_maternalgrandfather"] = horseinfo_df["horse_maternalgrandfather"].str.strip()
+horseinfo_df["horse_maternalgrandmother"] = horseinfo_df["horse_maternalgrandmother"].str.strip()
+
+# レース結果情報
+horseraceresult_df["コースタイプ"] = horseraceresult_df["距離"].str.get(0)
+horseraceresult_df["距離"] = horseraceresult_df["距離"].str.strip("芝|ダ")
+
+# 加工状態確認
+print(horseinfo_df)
+print(horseraceresult_df)
+
 # データフレームCSV出力
 horseinfo_df.to_csv("horse.csv")
 horseraceresult_df.to_csv("horseraceresult.csv")
