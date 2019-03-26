@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[203]:
+# In[317]:
 
 
 #作成日：2019/03/26
@@ -17,6 +17,7 @@ import csv
 from urllib.parse import urljoin
 import os.path, time, re
 import datetime
+import re
 
 #テーブル情報からDataFrame生成する関数
 def getRaceResult(URL):
@@ -118,15 +119,39 @@ def getRaceHeader(URL):
     #-----------------------------------------------------#
 
     #データ加工処理１:race_typeを分割して付加-2 ---------------#
+    #分割後のカラム：
+    #   1．race_distance(距離)
+    #   2．ground_type(芝 / ダート種別)
+    #   3．direction(回り方向 右か左か)
+    #   4．inner_outside(内回り化外回りか)
+    
     t = df.at[0,'race_type']
-    t_1 = t[:1]
-    t = t[1:]
-    tmp_t = t.split('m')
+    t = t.replace('m', '')
+    pat = '\d+'
 
-    df['ground_type'] = t_1
-    df['race_distance'] = tmp_t[0][1:]
-    df['direction'] = tmp_t[0][:1]
+    t_distance = re.findall(pat, t)
+    t_split_1 = re.split(pat, t)
 
+    df['race_distance'] = t_distance[0]
+    
+    #' 外'が含まれる場合（半角スペースでsplit）
+    if re.search(' 外', t_split_1[0]) != None:
+        t_split_2 = t_split_1[0].split(' ')
+        df['ground_type'] = t_split_2[0][0]
+        df['direction'] = t_split_2[0][1]
+        df['inner_outside'] = t_split_2[1]
+
+    #' ダート'が含まれる場合
+    elif re.search(' ダート', t_split_1[0]) != None:
+        df['ground_type'] = t_split_1[0]
+        df['direction'] = '-'
+        df['inner_outside'] = '内'
+    
+    else:
+        df['ground_type'] = t_split_1[0][0]
+        df['direction'] = t_split_1[0][1]
+        df['inner_outside'] = '内'
+    
     #もともとのカラムを削除
     df = df.drop('race_type', axis=1)
     #-----------------------------------------------------#
@@ -134,6 +159,12 @@ def getRaceHeader(URL):
     #データ加工処理２:race_infoを分割して付加 ---------------#
     ts = df.at[0,'race_info'].split(' ')
 
+    ts[0] = ts[0].replace('年','-')
+    ts[0] = ts[0].replace('月','-')
+    ts[0] = ts[0].replace('日',' 00:00:00')
+    df.at[0, 'date'] = str(datetime.datetime.strptime(ts[0], '%Y-%m-%d %H:%M:%S'))
+
+    '''
     for idx, data in enumerate(ts):
         if len(ts[idx]) != 0:
             if idx==0:
@@ -143,6 +174,7 @@ def getRaceHeader(URL):
                 df.at[0, 'date'] = datetime.datetime.strptime(ts[idx], '%Y/%m/%d')
             else :
                 df['race_info_'+str(idx)] = ts[idx]           
+    '''
 
     #もともとのカラム削除
     df = df.drop('race_info', axis=1)    
@@ -218,11 +250,11 @@ def createNextMonthLink(URL):
 
 
 
-#main処理---------------------------------------------------------------------
+# main処理---------------------------------------------------------------------
 #**********************************************************
-#ページリンクを辿って直近のレースまで再帰的にデータを取得
-#翌月のレースへ向かって処理を行う。
-#そのため、スタートしたいU過去日のURLを初期引数に与えること。
+# ページリンクを辿って直近のレースまで再帰的にデータを取得
+# 翌月のレースへ向かって処理を行う。
+# そのため、スタートしたいU過去日のURLを初期引数に与えること。
 #**********************************************************
 
 #初期URL
