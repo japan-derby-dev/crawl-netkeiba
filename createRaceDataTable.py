@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[317]:
+# In[ ]:
 
 
 # 作成日：2019/03/26
@@ -64,6 +64,7 @@ def getRaceResult(URL):
     # 発走取りやめになった馬を削除
     df = df[df['着順'] != '取']
     df = df[df['着順'] != '中']
+    df = df[df['着順'] != '3(降)']
     # ---------------------------------------------------------
 
     # データ加工１：馬体重/増減を分ける---------------------------
@@ -183,6 +184,11 @@ def getRaceHeader(URL):
     # もともとのカラム削除
     df = df.drop('race_info', axis=1)
     #-----------------------------------------------------#
+    
+    #race_idを追加（URLのエントリ末尾数字を使用）
+    race_id = URL.split('/')[-2]
+    df['race_id'] = race_id
+    
     return df
 
 # ヘッダーDataFrameとレース結果DataFrameを横結合
@@ -268,7 +274,7 @@ def createNextMonthLink(URL):
 # そのため、スタートしたいU過去日のURLを初期引数に与えること。
 # **********************************************************
 # 初期URL
-n_mon = 'https://db.netkeiba.com/?pid=race_kaisai&syusai=10&date=20190105'
+n_mon = 'https://db.netkeiba.com/?pid=race_kaisai&syusai=10&date=20190302'
 
 merge_df = pd.DataFrame()
 while True:
@@ -294,7 +300,8 @@ while True:
         time.sleep(1)
     except:
         print("次月のカレンダーが・・・ない！？（処理を終了）")
-        merge_df = merge_df.reset_index()
+        merge_df = merge_df.reset_index(drop=True)
         merge_df.to_csv("race_merge.csv")
         break
 # ------------------------------------------------------------------------------
+
