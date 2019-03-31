@@ -5,13 +5,13 @@ from itertools import product
 from urllib.parse import urljoin
 import time
 
-# スクレイピングに利用するクラス名
-horseInfoTblCLSName = 'db_prof_table no_OwnerUnit'
-bloodTblCLSName = 'blood_table'
-raceResultTblCLSName = 'db_h_race_results nk_tb_common'
+baseUrl = 'https://db.netkeiba.com/'
 
 
 def getHorseHeader(url):
+    horseInfoTblCLSName = 'db_prof_table'
+    raceResultTblCLSName = 'db_h_race_results nk_tb_common'
+
     # 馬ページ取得
     html = requests.get(url)
     soup = BeautifulSoup(html.content, 'lxml')
@@ -51,6 +51,10 @@ def getHorseHeader(url):
 
 
 def getHorseData(url):
+    horseInfoTblCLSName = 'db_prof_table'
+    bloodTblCLSName = 'blood_table'
+    raceResultTblCLSName = 'db_h_race_results nk_tb_common'
+
     # 馬ページ取得
     html = requests.get(url)
     soup = BeautifulSoup(html.content, 'lxml')
@@ -127,8 +131,9 @@ def formatHorseRaceResult(horseraceresult_df):
         "/", expand=True)[2]
     horseraceresult_df["コースタイプ"] = horseraceresult_df["距離"].str.get(0)
     horseraceresult_df["距離"] = horseraceresult_df["距離"].str.strip("芝|ダ|障")
-    horseraceresult_df["通過平均"] = horseraceresult_df["通過"].str.split(
-        "-", expand=True).astype(float).mean(axis=1, skipna=True)
+    #horseraceresult_df["通過平均"] = horseraceresult_df["通過"].str.split("-", expand=True).astype(float).mean(axis=1, skipna=True)
+    horseraceresult_df["通過平均"] = pd.to_numeric(horseraceresult_df["通過"].str.split(
+        "-", expand=True), errors='coerce').mean(axis=1, skipna=True)
     horseraceresult_df["ペース前半"] = horseraceresult_df["ペース"].str.split(
         "-", expand=True)[0]
     horseraceresult_df["ペース後半"] = horseraceresult_df["ペース"].str.split(
@@ -193,12 +198,11 @@ def getEventDateLinksFromCalender(URL):
     calendar = soup.findAll("div", {"class": CLS_NAME})[0]
     tds = calendar.find_all("td")
     links = []
-    base = 'https://db.netkeiba.com/'
     for td in tds:
         race_link = td.find('a')
         if race_link is not None:
             race_link_url = race_link.get('href')
-            links.append(urljoin(base, race_link_url))
+            links.append(urljoin(baseUrl, race_link_url))
     return links
 
 
@@ -215,7 +219,7 @@ def createNextMonthLink(URL):
     li = calendar.findAll('li', {'class': CLS_NAME_2})[0]
     next_month_link = li.find_all('a')[-1].get('href')
 
-    next_month_url = urljoin(base, next_month_link)
+    next_month_url = urljoin(baseUrl, next_month_link)
 
     return next_month_url
 
@@ -223,9 +227,13 @@ def createNextMonthLink(URL):
 ###########################################################
 # main
 ###########################################################
-# 初期URL
+# 初期設定
 n_mon = 'https://db.netkeiba.com/?pid=race_kaisai&syusai=10&date=20190302'
 
+merge_info_df = pd.DataFrame()
+merge_raceresult_df = pd.DataFrame()
+
+'''
 while True:
     ed_links = getEventDateLinksFromCalender(n_mon)
     time.sleep(1)
@@ -236,34 +244,68 @@ while True:
 
         for r_link in r_links:
             h_links = getHourseLinksFromRacePage(r_link)
-            print(h_links)
-            print(len(h_links))
+            time.sleep(1)
 
-    break
-'''
+            for h_link in h_links:
+                print(urljoin(baseUrl, h_link))
+                horseinfo_header, horseraceresult_header = getHorseHeader(
+                    urljoin(baseUrl, h_link))
+                horseinfo_data, horseraceresult_data = getHorseData(
+                    urljoin(baseUrl, h_link))
+
+                # データフレーム取得
+                horseinfo_df = pd.DataFrame(
+                    [horseinfo_data], columns=horseinfo_header)
+                horseraceresult_df = pd.DataFrame(
+                    horseraceresult_data, columns=horseraceresult_header)
+
+                # データフレーム結合
+                merge_info_df = pd.concat([merge_info_df, horseinfo_df])
+                merge_raceresult_df = pd.concat(
+                    [merge_raceresult_df, horseraceresult_df])
+
+                time.sleep(1)
+
     try:
         n_mon = createNextMonthLink(r_links[0])
         time.sleep(1)
     except:
         print("次月のカレンダーが・・・ない！？（処理を終了）")
-        merge_df = merge_df.reset_index(drop=True)
-        merge_df.to_csv("race_merge.csv")
         break
+'''
 
-# 配列取得
-horseinfo_header, horseraceresult_header = getHorseHeader(url)
-horseinfo_data, horseraceresult_data = getHorseData(url)
+while True:
+    h_links = getHourseLinksFromRacePage(
+        "https://db.netkeiba.com/race/201909020212/")
+    time.sleep(1)
 
-# データフレーム作成
-horseinfo_df = pd.DataFrame([horseinfo_data], columns=horseinfo_header)
-horseraceresult_df = pd.DataFrame(
-    horseraceresult_data, columns=horseraceresult_header)
+    for h_link in h_links:
+        print(urljoin(baseUrl, h_link))
+        horseinfo_header, horseraceresult_header = getHorseHeader(
+            urljoin(baseUrl, h_link))
+        horseinfo_data, horseraceresult_data = getHorseData(
+            urljoin(baseUrl, h_link))
 
-# 加工状態確認
-print(horseinfo_df)
-print(horseraceresult_df)
+        # データフレーム取得
+        horseinfo_df = pd.DataFrame(
+            [horseinfo_data], columns=horseinfo_header)
+        horseraceresult_df = pd.DataFrame(
+            horseraceresult_data, columns=horseraceresult_header)
+
+        # データフレーム加工
+        formatHorseInfo(horseinfo_df)
+        formatHorseRaceResult(horseraceresult_df)
+
+        # データフレーム結合
+        merge_info_df = pd.concat([merge_info_df, horseinfo_df], sort=True)
+        merge_raceresult_df = pd.concat(
+            [merge_raceresult_df, horseraceresult_df], sort=True)
+
+        time.sleep(1)
+
+    break
+
 
 # データフレームCSV出力
-horseinfo_df.to_csv("horse.csv")
-horseraceresult_df.to_csv("horseraceresult.csv")
-'''
+merge_info_df.to_csv("horse.csv")
+merge_raceresult_df.to_csv("horseraceresult.csv")
