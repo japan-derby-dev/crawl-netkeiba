@@ -21,6 +21,8 @@ import re
 import datetime
 import re
 
+# テーブル情報からDataFrame生成する関数
+
 
 def getRaceResult(URL):
     # 定数定義
