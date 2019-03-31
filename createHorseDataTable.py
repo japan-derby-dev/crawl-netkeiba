@@ -94,9 +94,13 @@ def getHorseData(url):
         raceData.append(url.replace(
             'https://db.netkeiba.com/horse/', '').replace('/', ''))
 
+        index = 1
         for cell in row.findAll('td'):
-            raceData.append(cell.get_text())
-
+            if index != 5:
+                raceData.append(cell.get_text())
+            else:
+                raceData.append(cell.find('a').get('href'))
+            index += 1
         horseraceresultdata_list.append(raceData)
 
     return horseinfodata_list, horseraceresultdata_list
@@ -126,8 +130,21 @@ horseinfo_df["horse_maternalgrandfather"] = horseinfo_df["horse_maternalgrandfat
 horseinfo_df["horse_maternalgrandmother"] = horseinfo_df["horse_maternalgrandmother"].str.strip()
 
 # レース結果情報
+horseraceresult_df["レース名"] = horseraceresult_df["レース名"].str.split(
+    "/", expand=True)[2]
 horseraceresult_df["コースタイプ"] = horseraceresult_df["距離"].str.get(0)
-horseraceresult_df["距離"] = horseraceresult_df["距離"].str.strip("芝|ダ")
+horseraceresult_df["距離"] = horseraceresult_df["距離"].str.strip("芝|ダ|障")
+horseraceresult_df["通過平均"] = horseraceresult_df["通過"].str.split(
+    "-", expand=True).astype(float).mean(axis=1, skipna=True)
+horseraceresult_df["ペース前半"] = horseraceresult_df["ペース"].str.split(
+    "-", expand=True)[0]
+horseraceresult_df["ペース後半"] = horseraceresult_df["ペース"].str.split(
+    "-", expand=True)[1]
+horseraceresult_df["馬体重増減"] = horseraceresult_df["馬体重"].str.split(
+    "(", expand=True)[1]
+horseraceresult_df["馬体重増減"] = horseraceresult_df["馬体重増減"].str.strip(")")
+horseraceresult_df["馬体重"] = horseraceresult_df["馬体重"].str.split(
+    "(", expand=True)[0]
 
 # 加工状態確認
 print(horseinfo_df)
