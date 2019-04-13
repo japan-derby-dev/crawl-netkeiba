@@ -121,7 +121,7 @@ def formatHorseRaceResult(horseraceresult_df):
         "/", expand=True)[2]
     horseraceresult_df["コースタイプ"] = horseraceresult_df["距離"].str.get(0)
     horseraceresult_df["距離"] = horseraceresult_df["距離"].str.strip("芝|ダ|障")
-    #horseraceresult_df["通過平均"] = horseraceresult_df["通過"].str.split("-", expand=True).astype(float).mean(axis=1, skipna=True)
+    # horseraceresult_df["通過平均"] = horseraceresult_df["通過"].str.split("-", expand=True).astype(float).mean(axis=1, skipna=True)
     horseraceresult_df["ペース前半"] = horseraceresult_df["ペース"].str.split(
         "-", expand=True)[0]
     horseraceresult_df["ペース後半"] = horseraceresult_df["ペース"].str.split(
@@ -216,11 +216,11 @@ def createNextMonthLink(URL):
 # main
 ###########################################################
 # 初期設定
-n_mon = 'https://db.netkeiba.com/?pid=race_kaisai&syusai=10&date=20190302'
+n_mon = 'https://db.netkeiba.com/?pid=race_kaisai&syusai=10&date=20180303'
 
 merge_info_df = pd.DataFrame()
 merge_raceresult_df = pd.DataFrame()
-total = 1
+total = 0
 
 while True:
     ed_links = getEventDateLinksFromCalender(n_mon)
@@ -238,33 +238,40 @@ while True:
                 horseurl = urljoin(baseUrl, h_link)
                 horseid = horseurl.replace(
                     'https://db.netkeiba.com/horse/', '').replace('/', '')
-
-                # 馬ページ取得
-                html = requests.get(horseurl)
-                soup = BeautifulSoup(html.content, 'lxml')
-
-                print(str(total) + "番目:" + horseurl)
-                horseinfo_header, horseraceresult_header = getHorseHeader(soup)
-                horseinfo_data, horseraceresult_data = getHorseData(
-                    soup, horseid)
-
-                # データフレーム取得
-                horseinfo_df = pd.DataFrame(
-                    [horseinfo_data], columns=horseinfo_header)
-                horseraceresult_df = pd.DataFrame(
-                    horseraceresult_data, columns=horseraceresult_header)
-
-                # データフレーム結合
-                merge_info_df = pd.concat(
-                    [merge_info_df, horseinfo_df], sort=True)
-                merge_raceresult_df = pd.concat(
-                    [merge_raceresult_df, horseraceresult_df.drop(0)], sort=True)
-
                 total += 1
-                time.sleep(0.5)
 
+                # 既に取得済みの馬かどうか確認
+                if total == 1 or merge_info_df[merge_info_df.horse_id == horseid].empty:
+                    # 馬ページ取得
+                    html = requests.get(horseurl)
+                    soup = BeautifulSoup(html.content, 'lxml')
+
+                    print(str(total) + "番目:" + horseurl)
+
+                    horseinfo_header, horseraceresult_header = getHorseHeader(
+                        soup)
+                    horseinfo_data, horseraceresult_data = getHorseData(
+                        soup, horseid)
+
+                    # データフレーム取得
+                    horseinfo_df = pd.DataFrame(
+                        [horseinfo_data], columns=horseinfo_header)
+                    horseraceresult_df = pd.DataFrame(
+                        horseraceresult_data, columns=horseraceresult_header)
+
+                    # データフレーム結合
+                    merge_info_df = pd.concat(
+                        [merge_info_df, horseinfo_df], sort=True)
+                    merge_raceresult_df = pd.concat(
+                        [merge_raceresult_df, horseraceresult_df.drop(0)], sort=True)
+
+                    time.sleep(0.5)
+                else:
+                    print(str(total) + "番目:" + horseurl + "(skip)")
+                    continue
     try:
-        n_mon = createNextMonthLink(r_links[0])
+        n_mon = createNextMonthLink(ed_links[0])
+        print(ed_links[0])
         time.sleep(1)
     except:
         print("次月のカレンダーが・・・ない！？（処理を終了）")
